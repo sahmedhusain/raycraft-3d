@@ -8,14 +8,21 @@ pub enum Texture {
 
 impl Texture {
     #[inline]
-    pub fn color_at(&self, p: Vec3) -> Vec3 {
+    pub fn color_at(&self, u: f64, v: f64, enable_textures: bool) -> Vec3 {
         match self {
             Texture::Solid(c) => *c,
             Texture::Checker(c1, c2, scale) => {
-                let s = scale;
-                let s_val =
-                    (p.x * s).floor() as i32 + (p.y * s).floor() as i32 + (p.z * s).floor() as i32;
-                if s_val % 2 == 0 { *c1 } else { *c2 }
+                if !enable_textures {
+                    return *c1; // Fall back to solid color when textures are disabled
+                }
+                // Alternate grid squares based on UV coordinate sums
+                let u_grid = (u * scale).floor() as i32;
+                let v_grid = (v * scale).floor() as i32;
+                if (u_grid + v_grid) % 2 == 0 {
+                    *c1
+                } else {
+                    *c2
+                }
             }
         }
     }

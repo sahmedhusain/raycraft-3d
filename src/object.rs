@@ -5,10 +5,12 @@ use crate::vec3::Vec3;
 // Stores details about a ray-shape collision
 #[derive(Debug, Clone, Copy)]
 pub struct HitRecord {
-    pub t: f64,
-    pub p: Vec3,
-    pub normal: Vec3,
-    pub material: Material,
+    pub t: f64,              // Distance from ray origin to collision point
+    pub p: Vec3,             // Exact 3D point of collision
+    pub normal: Vec3,        // Normal vector pointing perpendicular to the surface
+    pub u: f64,              // Texture coordinate U in [0.0, 1.0]
+    pub v: f64,              // Texture coordinate V in [0.0, 1.0]
+    pub material: Material,  // Material of the object that was hit
 }
 
 // Interface that all shapes must implement
@@ -70,10 +72,19 @@ impl Intersect for Sphere {
             -normal
         };
 
+        // Calculate spherical UV texture coordinates
+        let d = (p - self.center).normalize();
+        let phi = d.z.atan2(d.x);
+        let theta = d.y.asin();
+        let u = 1.0 - (phi + std::f64::consts::PI) / (2.0 * std::f64::consts::PI);
+        let v = (theta + std::f64::consts::PI / 2.0) / std::f64::consts::PI;
+
         Some(HitRecord {
             t: root,
             p,
             normal,
+            u,
+            v,
             material: self.material,
         })
     }
@@ -122,10 +133,21 @@ impl Intersect for Plane {
             -self.normal
         };
 
+        // Calculate planar UV texture coordinates based on plane orientation
+        let (u, v) = if self.normal.y.abs() > 0.8 {
+            (p.x, p.z)
+        } else if self.normal.x.abs() > 0.8 {
+            (p.y, p.z)
+        } else {
+            (p.x, p.y)
+        };
+
         Some(HitRecord {
             t,
             p,
             normal,
+            u,
+            v,
             material: self.material,
         })
     }
@@ -221,10 +243,30 @@ impl Intersect for Cube {
             -normal
         };
 
+        // Calculate cubic UV coordinates based on which face normal was hit
+        let (u, v) = if normal.x.abs() > 0.8 {
+            (
+                (p.y - self.min.y) / (self.max.y - self.min.y).max(1e-6),
+                (p.z - self.min.z) / (self.max.z - self.min.z).max(1e-6)
+            )
+        } else if normal.y.abs() > 0.8 {
+            (
+                (p.x - self.min.x) / (self.max.x - self.min.x).max(1e-6),
+                (p.z - self.min.z) / (self.max.z - self.min.z).max(1e-6)
+            )
+        } else {
+            (
+                (p.x - self.min.x) / (self.max.x - self.min.x).max(1e-6),
+                (p.y - self.min.y) / (self.max.y - self.min.y).max(1e-6)
+            )
+        };
+
         Some(HitRecord {
             t,
             p,
             normal,
+            u,
+            v,
             material: self.material,
         })
     }
@@ -317,10 +359,28 @@ impl Intersect for Cylinder {
                 -best_normal
             };
 
+            // Calculate cylindrical UV coordinates
+            let (u, v) = if best_normal.y.abs() > 0.8 {
+                // Hitting top/bottom caps
+                (
+                    (p.x - self.center.x) / self.radius,
+                    (p.z - self.center.z) / self.radius
+                )
+            } else {
+                // Hitting cylinder tube wall
+                let phi = (p.z - self.center.z).atan2(p.x - self.center.x);
+                (
+                    1.0 - (phi + std::f64::consts::PI) / (2.0 * std::f64::consts::PI),
+                    (p.y - self.center.y) / self.height
+                )
+            };
+
             Some(HitRecord {
                 t: best_t,
                 p,
                 normal,
+                u,
+                v,
                 material: self.material,
             })
         } else {

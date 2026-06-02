@@ -117,10 +117,10 @@ impl Scene {
     // Built-in Scene 4: Same showroom, alternate camera perspective
     pub fn build_scene_4(aspect_ratio: f64) -> Self {
         let camera = Camera::new(
-            Vec3::new(2.8, 2.0, -1.0),
-            Vec3::new(0.0, -0.1, -4.0),
-            Vec3::new(0.0, 1.0, 0.0),
-            50.0,
+            Vec3::new(3.2, 2.4, -0.6),     // Moved further back and slightly higher
+            Vec3::new(0.0, -0.1, -4.0),    // Look At (same target)
+            Vec3::new(0.0, 1.0, 0.0),      // Up Vector
+            60.0,                          // FOV increased to 60.0 for wide-angle zoom out
             aspect_ratio,
         );
 
@@ -139,21 +139,20 @@ impl Scene {
         );
         objects.push(Box::new(plane));
 
-        // 2. Sphere (Shiny Blue, 30% reflective)
-        let sphere_mat = Material::shiny(Vec3::new(0.1, 0.3, 0.9), 0.3);
+        // 2. Sphere (Shiny Blue, 30% reflective - checkerboard textured)
+        let sphere_mat = Material::new(
+            Texture::Checker(Vec3::new(0.1, 0.3, 0.9), Vec3::new(0.4, 0.6, 1.0), 10.0), // Blue / Light Blue checkerboard
+            0.1, 0.7, 0.3, 40.0,
+            0.3, 1.0, 0.0
+        );
         let sphere = Sphere::new(Vec3::new(-1.6, -0.2, -4.2), 0.8, sphere_mat);
         objects.push(Box::new(sphere));
 
-        // 3. Cube (Glossy Green, 15% reflective)
+        // 3. Cube (Glossy Green, 15% reflective - checkerboard textured)
         let cube_mat = Material::new(
-            Texture::Solid(Vec3::new(0.1, 0.8, 0.2)),
-            0.1,
-            0.7,
-            0.3,
-            40.0,
-            0.15,
-            1.0,
-            0.0,
+            Texture::Checker(Vec3::new(0.1, 0.8, 0.2), Vec3::new(0.5, 0.9, 0.6), 4.0), // Green / Light Green checkerboard
+            0.1, 0.7, 0.3, 40.0,
+            0.15, 1.0, 0.0
         );
         let cube = Cube::new(
             Vec3::new(0.8, -1.0, -3.8),
@@ -162,20 +161,18 @@ impl Scene {
         );
         objects.push(Box::new(cube));
 
-        // 4. Cylinder (Shiny Orange)
-        let cyl_mat = Material::shiny(Vec3::new(0.9, 0.45, 0.05), 0.2);
+        // 4. Cylinder (Shiny Orange, 20% reflective - checkerboard textured)
+        let cyl_mat = Material::new(
+            Texture::Checker(Vec3::new(0.9, 0.45, 0.05), Vec3::new(1.0, 0.7, 0.3), 8.0), // Orange / Yellow checkerboard
+            0.1, 0.8, 0.2, 30.0,
+            0.2, 1.0, 0.0
+        );
         let cylinder = Cylinder::new(Vec3::new(-0.3, -1.0, -3.5), 0.4, 1.2, cyl_mat);
         objects.push(Box::new(cylinder));
 
-        // 5. Glass Sphere (Refractive & Transparent, situated at center-back)
-        let glass_mat = Material::glass(1.5, 0.9);
-        let glass_sphere = Sphere::new(Vec3::new(-0.2, 0.5, -5.0), 0.6, glass_mat);
-        objects.push(Box::new(glass_sphere));
-
-        // Two light sources (Primary key light and a secondary soft blue fill light)
+        // Single light source to cast exactly one shadow in a single direction
         let lights = vec![
             Light::new(Vec3::new(4.0, 6.0, -1.0), 1.5, Vec3::new(1.0, 1.0, 1.0)),
-            Light::new(Vec3::new(-3.0, 3.0, -2.0), 0.5, Vec3::new(0.8, 0.8, 0.9)),
         ];
 
         Self {

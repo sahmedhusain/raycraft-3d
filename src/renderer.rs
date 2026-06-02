@@ -2,11 +2,16 @@ use crate::ray::Ray;
 use crate::scene::Scene;
 use crate::vec3::Vec3;
 
-
 const MAX_DEPTH: i32 = 5;
 
+#[derive(Debug, Clone, Copy)]
+pub struct RenderConfig {
+    pub enable_textures: bool,
+    pub enable_reflections: bool,
+}
+
 // Trace a ray recursively through the scene to calculate color
-pub fn trace_ray(ray: &Ray, scene: &Scene, depth: i32) -> Vec3 {
+pub fn trace_ray(ray: &Ray, scene: &Scene, depth: i32, config: RenderConfig) -> Vec3 {
     // 1. If we reach the recursion limit, stop and return black
     if depth <= 0 {
         return Vec3::zero();
@@ -26,8 +31,8 @@ pub fn trace_ray(ray: &Ray, scene: &Scene, depth: i32) -> Vec3 {
     }
 
     if let Some(hit) = closest_hit {
-        // Retrieve surface texture color at the hit point
-        let material_color = hit.material.texture.color_at(hit.p);
+        // Retrieve surface texture color at the hit point (optional texture flag check)
+        let material_color = hit.material.texture.color_at(hit.u, hit.v, config.enable_textures);
 
         // Base ambient component
         let ambient = hit.material.ambient * scene.ambient_light;
@@ -75,20 +80,20 @@ pub fn trace_ray(ray: &Ray, scene: &Scene, depth: i32) -> Vec3 {
         // Combine local direct lighting components
         let local_color = material_color * (ambient + diffuse_sum) + specular_sum;
 
-        // 5. Recursive Reflection (Mirror surfaces)
+        // 5. Recursive Reflection (Mirror surfaces) - Checked against config flag
         let mut reflected_color = Vec3::zero();
-        if hit.material.reflective > 0.0 {
+        if config.enable_reflections && hit.material.reflective > 0.0 {
             let reflect_dir = ray.direction.reflect(&hit.normal).normalize();
             let reflect_ray = Ray::new(hit.p + hit.normal * 1e-4, reflect_dir);
-            reflected_color = trace_ray(&reflect_ray, scene, depth - 1);
+            reflected_color = trace_ray(&reflect_ray, scene, depth - 1, config);
         }
 
-        // 6. Recursive Refraction & Transparency (Glass/Water surfaces)
+        // 6. Recursive Refraction & Transparency (Glass/Water surfaces) - Checked against config flag
         let mut refracted_color = Vec3::zero();
         let mut is_refracted = false;
         let mut cos_theta = 0.0;
 
-        if hit.material.transparency > 0.0 {
+        if config.enable_reflections && hit.material.transparency > 0.0 {
             let dot_product = ray.direction.dot(&hit.normal);
 
             // Determine if the ray is entering or leaving the object
@@ -106,13 +111,13 @@ pub fn trace_ray(ray: &Ray, scene: &Scene, depth: i32) -> Vec3 {
             if let Some(refract_dir) = ray.direction.refract(&normal_out, etai_over_etat) {
                 // Bias slightly along inside normal direction to prevent self-intersection inside glass
                 let refract_ray = Ray::new(hit.p - normal_out * 1e-4, refract_dir);
-                refracted_color = trace_ray(&refract_ray, scene, depth - 1);
+                refracted_color = trace_ray(&refract_ray, scene, depth - 1, config);
                 is_refracted = true;
             }
         }
 
-        // 7. Blend shading components based on materials
-        if hit.material.transparency > 0.0 && is_refracted {
+        // 7. Blend shading components based on materials and config flags
+        if config.enable_reflections && hit.material.transparency > 0.0 && is_refracted {
             // Apply Fresnel's Schlick Approximation for realistic glass borders
             let r0 = ((1.0 - hit.material.refractive_index)
                 / (1.0 + hit.material.refractive_index))
@@ -121,7 +126,7 @@ pub fn trace_ray(ray: &Ray, scene: &Scene, depth: i32) -> Vec3 {
 
             let glass_blend = reflected_color * fresnel + refracted_color * (1.0 - fresnel);
             Vec3::lerp(local_color, glass_blend, hit.material.transparency)
-        } else if hit.material.reflective > 0.0 {
+        } else if config.enable_reflections && hit.material.reflective > 0.0 {
             local_color * (1.0 - hit.material.reflective)
                 + reflected_color * hit.material.reflective
         } else {
@@ -135,7 +140,7 @@ pub fn trace_ray(ray: &Ray, scene: &Scene, depth: i32) -> Vec3 {
 }
 
 // Renders a full scene using highly optimized parallel multi-threading
-pub fn render(scene: &Scene, width: usize, height: usize) -> Vec3s {
+pub fn render(scene: &Scene, width: usize, height: usize, config: RenderConfig) -> Vec3s {
     let mut pixels = vec![Vec3::zero(); width * height];
     
     // Determine the number of CPU threads available on your computer
@@ -167,7 +172,7 @@ pub fn render(scene: &Scene, width: usize, height: usize) -> Vec3s {
                         let t = (height - 1 - y) as f64 / (height - 1) as f64;
 
                         let ray = scene.camera.get_ray(s, t);
-                        let color = trace_ray(&ray, scene, MAX_DEPTH);
+                        let color = trace_ray(&ray, scene, MAX_DEPTH, config);
                         rows.push(color);
                     }
                 }

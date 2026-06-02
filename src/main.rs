@@ -24,11 +24,13 @@ Options:
   --scene <1-4>   Select a built-in audit scene (default: 3)
                   1: Single Sphere Scene
                   2: Plane & Low-Brightness Cube Scene
-                  3: Complete Showroom (All 4 shapes + glass sphere)
+                  3: Complete Showroom (All 4 shapes)
                   4: Showroom from an alternate camera perspective
   --file <path>   Load a custom scene configuration from a .rt file
   --width <px>    Override viewport width in pixels (default: 800)
   --height <px>   Override viewport height in pixels (default: 600)
+  -t, --textures  Enable surface textures (e.g., checkerboards)
+  -r, --reflections Enable mirror reflections and transparent glass refractions
   -h, --help      Display this help menu
 "
     );
@@ -37,12 +39,13 @@ Options:
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    //defaults
+    // defaults
     let mut scene_num = 3;
     let mut file_path: Option<String> = None;
-    // 800x600 resolution
     let mut width = 800;
     let mut height = 600;
+    let mut enable_textures = false;
+    let mut enable_reflections = false;
 
     let mut i = 1;
     while i < args.len() {
@@ -96,6 +99,14 @@ fn main() {
                     process::exit(1);
                 }
             }
+            "-t" | "--textures" => {
+                enable_textures = true;
+                i += 1;
+            }
+            "-r" | "--reflections" => {
+                enable_reflections = true;
+                i += 1;
+            }
             "-h" | "--help" => {
                 print_help();
                 process::exit(0);
@@ -128,6 +139,7 @@ fn main() {
             _ => unreachable!(),
         }
     };
+
     eprintln!(
         "Info: Commencing render [Resolution: {}x{}]...",
         width, height
@@ -135,7 +147,12 @@ fn main() {
 
     let start_time = std::time::Instant::now();
 
-    let pixels = renderer::render(&scene, width, height);
+    let config = renderer::RenderConfig {
+        enable_textures,
+        enable_reflections,
+    };
+
+    let pixels = renderer::render(&scene, width, height, config);
 
     let duration = start_time.elapsed();
     eprintln!("Info: Render completed in {:.2?}!", duration);
