@@ -159,7 +159,7 @@ You can create custom scenes by using a `.rt` configuration file. The ray tracer
 To create a new custom scene file, you can copy the template. You can use the following command to duplicate it while **removing all comment lines (`#`)** to keep the file clean:
 
 ```bash
-grep -v '^#' scene.rt > my_custom_scene.rt
+grep -v '^#' scene.rt.example > my_custom_scene.rt
 ```
 
 ### Running Your Custom Scene
