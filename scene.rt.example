@@ -1,0 +1,100 @@
+# ==============================================================================
+# Ray Tracer (.rt) Scene Configuration & Terminal Guide
+# ==============================================================================
+# This file defines a 3D scene that can be parsed and rendered by the ray tracer.
+# You can customize coordinates, colors, lighting, and shape attributes below.
+#
+# TERMINAL USAGE GUIDE:
+# ---------------------
+# To render this custom scene, execute the following command:
+#   cargo run --release -- --file scene.rt > output.ppm
+#
+# Customizing Resolution:
+#   To render with custom dimensions (e.g., 400x300 for quick test runs):
+#   cargo run --release -- --file scene.rt --width 400 --height 300 > output.ppm
+#
+# Enabling Bonus Features:
+#   -t, --textures      Enables checkerboard surface textures
+#   -r, --reflections   Enables mirror reflections and transparent glass refractions
+#   -p, --particles     Enables floating sparkles / dust particles
+#   -f, --fluids        Enables a transparent refractive wavy fluid plane at Y = -0.85
+#
+# Combined Premium Rendering Command:
+#   cargo run --release -- --file scene.rt -t -r -p -f > premium_scene.ppm
+#
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Camera Configuration
+# ------------------------------------------------------------------------------
+# Format: camera <pos_x> <pos_y> <pos_z> <look_x> <look_y> <look_z> <fov>
+#
+# - pos_x pos_y pos_z: The 3D coordinate where the camera is located.
+# - look_x look_y look_z: The point in space the camera is pointing at.
+# - fov: Field of view in degrees. Higher values zoom out, lower values zoom in.
+#
+# Try changing camera coordinates to view the scene from a different angle!
+camera 0.0 1.0 1.5 0.0 -0.1 -4.0 50.0
+
+# ------------------------------------------------------------------------------
+# 2. Lighting & Brightness
+# ------------------------------------------------------------------------------
+# Ambient Light: Sets base brightness in shadows. (R G B values in range [0.0 - 1.0])
+# Format: ambient <r> <g> <b>
+ambient 0.15 0.15 0.18
+
+# Direct Light Source: Defines location, brightness multiplier, and color of lights.
+# Format: light <pos_x> <pos_y> <pos_z> <intensity> <r> <g> <b>
+#
+# - To change shadow angles: Move <pos_x> or <pos_z> coordinates of the light.
+# - To change brightness: Increase/decrease the <intensity> factor (e.g. 1.5 to 0.4).
+light 4.0 6.0 -1.0 1.5 1.0 1.0 1.0
+
+# ------------------------------------------------------------------------------
+# 3. 3D Shapes & Material Properties
+# ------------------------------------------------------------------------------
+
+# --- SHAPE 1: Flat Plane (Checkerboard Floor) ---
+# Format: plane <pt_x> <pt_y> <pt_z> <n_x> <n_y> <n_z> <r> <g> <b> <specular> <reflective> [<checker_scale> <c2_r> <c2_g> <c2_b>]
+#
+# - pt_x pt_y pt_z: A point on the plane. Here, Y = -1.0 sets it as the floor.
+# - n_x n_y n_z: Normal vector pointing straight up (0.0 1.0 0.0).
+# - r g b: Base color (or primary checkerboard tile color).
+# - specular: Shininess highlight intensity (0.0 to 1.0).
+# - reflective: Reflection coefficient (0.0 to 1.0).
+# - checker_scale (optional): Tile density scale.
+# - c2_r c2_g c2_b (optional): Secondary checkerboard tile color.
+plane 0.0 -1.0 0.0 0.0 1.0 0.0 0.3 0.3 0.3 0.1 0.0 1.5 0.7 0.7 0.7
+
+# --- SHAPE 2: Sphere ---
+# Format: sphere <cx> <cy> <cz> <radius> <r> <g> <b> <specular> <reflective> <refr_idx> <transp>
+#
+# - cx cy cz: Center point of the sphere in 3D space.
+# - radius: Radius of the sphere.
+# - r g b: Solid color of the sphere (Blue/Teal here).
+# - specular: Shininess exponent/specular factor.
+# - reflective: Mirror reflectivity (e.g. 0.3 = 30% reflective).
+# - refr_idx: Index of Refraction (e.g., 1.5 for glass, 1.33 for water, 1.0 for air).
+# - transp: Transparency weight (0.0 to 1.0. If > 0.0, the sphere behaves like glass).
+sphere -1.6 -0.2 -4.2 0.8 0.1 0.3 0.9 40.0 0.3 1.0 0.0
+
+# --- SHAPE 3: Cube ---
+# Format: cube <min_x> <min_y> <min_z> <max_x> <max_y> <max_z> <r> <g> <b> <specular> <reflective>
+#
+# - min_x min_y min_z: Bottom-front-left corner coordinates.
+# - max_x max_y max_z: Top-back-right corner coordinates.
+# - r g b: Green color values.
+# - specular: Highlight intensity.
+# - reflective: Mirror reflectivity factor (0.15 = 15% reflective).
+cube 0.8 -1.0 -3.8 1.8 0.0 -2.8 0.1 0.8 0.2 40.0 0.15
+
+# --- SHAPE 4: Cylinder ---
+# Format: cylinder <cx> <cy> <cz> <radius> <height> <r> <g> <b> <specular> <reflective>
+#
+# - cx cy cz: Center of the bottom base cap of the cylinder.
+# - radius: Radius of the cylinder tube.
+# - height: Height of the cylinder along the vertical axis.
+# - r g b: Orange color values.
+# - specular: Highlight intensity.
+# - reflective: Mirror reflectivity factor (0.2 = 20% reflective).
+cylinder -0.3 -1.0 -3.5 0.4 1.2 0.9 0.45 0.05 30.0 0.2

@@ -31,6 +31,8 @@ Options:
   --height <px>   Override viewport height in pixels (default: 600)
   -t, --textures  Enable surface textures (e.g., checkerboards)
   -r, --reflections Enable mirror reflections and transparent glass refractions
+  -p, --particles Enable rendering of sparkles/dust particles
+  -f, --fluids    Enable transparent refractive fluid plane
   -h, --help      Display this help menu
 "
     );
@@ -46,6 +48,8 @@ fn main() {
     let mut height = 600;
     let mut enable_textures = false;
     let mut enable_reflections = false;
+    let mut enable_particles = false;
+    let mut enable_fluids = false;
 
     let mut i = 1;
     while i < args.len() {
@@ -107,6 +111,14 @@ fn main() {
                 enable_reflections = true;
                 i += 1;
             }
+            "-p" | "--particles" => {
+                enable_particles = true;
+                i += 1;
+            }
+            "-f" | "--fluids" => {
+                enable_fluids = true;
+                i += 1;
+            }
             "-h" | "--help" => {
                 print_help();
                 process::exit(0);
@@ -150,6 +162,8 @@ fn main() {
     let config = renderer::RenderConfig {
         enable_textures,
         enable_reflections,
+        enable_particles,
+        enable_fluids,
     };
 
     let pixels = renderer::render(&scene, width, height, config);

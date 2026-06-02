@@ -8,6 +8,8 @@ const MAX_DEPTH: i32 = 5;
 pub struct RenderConfig {
     pub enable_textures: bool,
     pub enable_reflections: bool,
+    pub enable_particles: bool,
+    pub enable_fluids: bool,
 }
 
 // Trace a ray recursively through the scene to calculate color
@@ -20,7 +22,7 @@ pub fn trace_ray(ray: &Ray, scene: &Scene, depth: i32, config: RenderConfig) -> 
     let mut closest_t = f64::INFINITY;
     let mut closest_hit = None;
 
-    // 2. Loop through all objects to find the closest collision
+    // 2. Loop through all standard objects to find the closest collision
     for obj in &scene.objects {
         if let Some(hit) = obj.intersect(ray) {
             if hit.t < closest_t {
@@ -30,7 +32,70 @@ pub fn trace_ray(ray: &Ray, scene: &Scene, depth: i32, config: RenderConfig) -> 
         }
     }
 
-    if let Some(hit) = closest_hit {
+    // 3. Generate and check intersections with deterministic particle spheres (if enabled)
+    if config.enable_particles {
+        let mut seed = 12345u32;
+        let mut next_random = || -> f64 {
+            seed = seed.wrapping_mul(1103515245).wrapping_add(12345);
+            ((seed / 65536) % 32768) as f64 / 32768.0
+        };
+
+        // Golden glowing, semi-transparent particles
+        let particle_mat = crate::material::Material::new(
+            crate::material::Texture::Solid(Vec3::new(0.95, 0.85, 0.3)),
+            0.6, 0.1, 0.4, 30.0,
+            0.1, 1.0, 0.4
+        );
+
+        for _ in 0..60 {
+            // Scatter within viewport bounds: X in [-2.5, 2.5], Y in [-0.8, 1.8], Z in [-5.2, -2.2]
+            let px = -2.5 + 5.0 * next_random();
+            let py = -0.8 + 2.6 * next_random();
+            let pz = -5.2 + 3.0 * next_random();
+            let radius = 0.015 + 0.03 * next_random(); // tiny dust size
+
+            let particle = crate::object::Sphere::new(Vec3::new(px, py, pz), radius, particle_mat);
+            if let Some(hit) = crate::object::Intersect::intersect(&particle, ray) {
+                if hit.t < closest_t {
+                    closest_t = hit.t;
+                    closest_hit = Some(hit);
+                }
+            }
+        }
+    }
+
+    // 4. Check intersection with a virtual transparent fluid plane at Y = -0.85 (if enabled)
+    if config.enable_fluids {
+        // Refractive water material (IoR = 1.333, 70% transparent)
+        let water_mat = crate::material::Material::glass(1.333, 0.7);
+        let water_plane = crate::object::Plane::new(
+            Vec3::new(0.0, -0.85, 0.0), // Situated slightly above checkerboard floor at Y = -1.0
+            Vec3::new(0.0, 1.0, 0.0),
+            water_mat,
+        );
+
+        if let Some(hit) = crate::object::Intersect::intersect(&water_plane, ray) {
+            if hit.t < closest_t {
+                closest_t = hit.t;
+                closest_hit = Some(hit);
+            }
+        }
+    }
+
+    let _ = closest_t; // Silence unused assignment warning
+
+    if let Some(mut hit) = closest_hit {
+        // 5. Apply wave coordinates mapping for fluid plane normal vector perturbation
+        if config.enable_fluids && (hit.p.y - -0.85).abs() < 1e-3 && hit.normal.y.abs() > 0.9 {
+            let wave_scale = 12.0;
+            let wave_amplitude = 0.12;
+            let dx = (hit.p.x * wave_scale).cos() * wave_amplitude;
+            let dz = (hit.p.z * wave_scale).sin() * wave_amplitude;
+            
+            // Re-assign the normal to be wavy and normalized
+            hit.normal = Vec3::new(dx, 1.0, dz).normalize();
+        }
+
         // Retrieve surface texture color at the hit point (optional texture flag check)
         let material_color = hit.material.texture.color_at(hit.u, hit.v, config.enable_textures);
 
@@ -40,18 +105,17 @@ pub fn trace_ray(ray: &Ray, scene: &Scene, depth: i32, config: RenderConfig) -> 
         let mut diffuse_sum = Vec3::zero();
         let mut specular_sum = Vec3::zero();
 
-        // 3. Loop through all lights to calculate diffuse and specular illumination
+        // 6. Loop through all lights to calculate diffuse and specular illumination
         for light in &scene.lights {
             let to_light = light.position - hit.p;
             let dist_to_light = to_light.length();
             let light_dir = to_light.normalize();
 
             // Cast a shadow ray from the hit point towards the light source
-            // Bias the start point slightly along the normal to prevent self-shadowing!
             let shadow_ray = Ray::new(hit.p + hit.normal * 1e-4, light_dir);
             let mut in_shadow = false;
 
-            // Check if any shape blocks this light source
+            // Check if standard shapes block the light
             for obj in &scene.objects {
                 if let Some(shadow_hit) = obj.intersect(&shadow_ray) {
                     if shadow_hit.t < dist_to_light {
@@ -61,7 +125,7 @@ pub fn trace_ray(ray: &Ray, scene: &Scene, depth: i32, config: RenderConfig) -> 
                 }
             }
 
-            // 4. If not in shadow, calculate Lambertian diffuse and Blinn-Phong specular
+            // If not in shadow, calculate Lambertian diffuse and Blinn-Phong specular
             if !in_shadow {
                 // Diffuse
                 let n_dot_l = hit.normal.dot(&light_dir).max(0.0);
@@ -80,7 +144,7 @@ pub fn trace_ray(ray: &Ray, scene: &Scene, depth: i32, config: RenderConfig) -> 
         // Combine local direct lighting components
         let local_color = material_color * (ambient + diffuse_sum) + specular_sum;
 
-        // 5. Recursive Reflection (Mirror surfaces) - Checked against config flag
+        // 7. Recursive Reflection (Mirror surfaces) - Checked against config flag
         let mut reflected_color = Vec3::zero();
         if config.enable_reflections && hit.material.reflective > 0.0 {
             let reflect_dir = ray.direction.reflect(&hit.normal).normalize();
@@ -88,7 +152,7 @@ pub fn trace_ray(ray: &Ray, scene: &Scene, depth: i32, config: RenderConfig) -> 
             reflected_color = trace_ray(&reflect_ray, scene, depth - 1, config);
         }
 
-        // 6. Recursive Refraction & Transparency (Glass/Water surfaces) - Checked against config flag
+        // 8. Recursive Refraction & Transparency (Glass/Water surfaces) - Checked against config flag
         let mut refracted_color = Vec3::zero();
         let mut is_refracted = false;
         let mut cos_theta = 0.0;
@@ -116,7 +180,7 @@ pub fn trace_ray(ray: &Ray, scene: &Scene, depth: i32, config: RenderConfig) -> 
             }
         }
 
-        // 7. Blend shading components based on materials and config flags
+        // 9. Blend shading components based on materials and config flags
         if config.enable_reflections && hit.material.transparency > 0.0 && is_refracted {
             // Apply Fresnel's Schlick Approximation for realistic glass borders
             let r0 = ((1.0 - hit.material.refractive_index)
@@ -133,7 +197,7 @@ pub fn trace_ray(ray: &Ray, scene: &Scene, depth: i32, config: RenderConfig) -> 
             local_color
         }
     } else {
-        // 8. If the ray misses all shapes, render a subtle dark gradient sky background
+        // 10. If the ray misses all shapes, render a subtle dark gradient sky background
         let t = 0.5 * (ray.direction.y + 1.0);
         Vec3::lerp(Vec3::new(0.01, 0.02, 0.05), Vec3::new(0.08, 0.12, 0.22), t)
     }
