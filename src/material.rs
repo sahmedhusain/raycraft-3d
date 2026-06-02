@@ -57,4 +57,73 @@ impl Material {
         }
     }
 
-    
+    // 1. Matte/Rough Material preset (e.g. chalk, rubber)
+    pub fn matte(color: Vec3) -> Self {
+        Self {
+            texture: Texture::Solid(color),
+            ambient: 0.1,
+            diffuse: 0.8,
+            specular: 0.1,
+            shininess: 10.0,
+            reflective: 0.0,
+            refractive_index: 1.0,
+            transparency: 0.0,
+        }
+    }
+
+    // 2. Shiny/Glossy Material preset (e.g. plastic, painted sphere)
+    pub fn shiny(color: Vec3, reflective: f64) -> Self {
+        Self {
+            texture: Texture::Solid(color),
+            ambient: 0.1,
+            diffuse: 0.7,
+            specular: 0.4,
+            shininess: 75.0,
+            reflective,
+            refractive_index: 1.0,
+            transparency: 0.0,
+        }
+    }
+
+    // 3. Mirror Material preset (highly reflective)
+    pub fn mirror() -> Self {
+        Self {
+            texture: Texture::Solid(Vec3::new(0.95, 0.95, 0.95)),
+            ambient: 0.05,
+            diffuse: 0.1,
+            specular: 0.9,
+            shininess: 150.0,
+            reflective: 0.9,
+            refractive_index: 1.0,
+            transparency: 0.0,
+        }
+    }
+
+    // 4. Glass/Water Material preset (refractive & transparent)
+    pub fn glass(refractive_index: f64, transparency: f64) -> Self {
+        Self {
+            texture: Texture::Solid(Vec3::new(0.98, 0.98, 0.98)),
+            ambient: 0.0,
+            diffuse: 0.05,
+            specular: 0.95,
+            shininess: 200.0,
+            reflective: 0.2,
+            refractive_index,
+            transparency,
+        }
+    }
+
+    // 5. Checkerboard Material preset (ideal for floors)
+    pub fn checker(c1: Vec3, c2: Vec3, scale: f64) -> Self {
+        Self {
+            texture: Texture::Checker(c1, c2, scale),
+            ambient: 0.2,
+            diffuse: 0.8,
+            specular: 0.0,
+            shininess: 10.0,
+            reflective: 0.0,
+            refractive_index: 1.0,
+            transparency: 0.0,
+        }
+    }
+}
