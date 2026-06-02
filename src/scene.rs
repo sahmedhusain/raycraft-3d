@@ -195,7 +195,7 @@ impl Scene {
 
         let mut camera_pos = Vec3::new(0.0, 0.0, 0.0);
         let mut camera_look = Vec3::new(0.0, 0.0, -5.0);
-        let mut camera_up = Vec3::new(0.0, 1.0, 0.0);
+        let camera_up = Vec3::new(0.0, 1.0, 0.0);
         let mut camera_fov = 40.0;
         let mut ambient_light = Vec3::new(0.1, 0.1, 0.1);
 

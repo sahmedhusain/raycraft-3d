@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vec3 {
@@ -101,6 +101,17 @@ impl Add for Vec3 {
         Self::new(self.x + other.x, self.y + other.y, self.z + other.z)
     }
 }
+
+// Vector AddAssign (+=)
+impl AddAssign for Vec3 {
+    #[inline]
+    fn add_assign(&mut self, other: Self) {
+        self.x += other.x;
+        self.y += other.y;
+        self.z += other.z;
+    }
+}
+
 
 // Vector Subtraction
 impl Sub for Vec3 {

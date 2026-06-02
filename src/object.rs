@@ -182,7 +182,7 @@ impl Intersect for Cube {
         let p = ray.point_at(t);
 
         // 5. Calculate which face of the cube was hit to set the normal
-        let mut normal = Vec3::new(1.0, 0.0, 0.0);
+        let normal;
         let bias = 1e-4;
 
         if (p.x - self.min.x).abs() < bias {

@@ -4,14 +4,6 @@ use crate::vec3::Vec3;
 #[derive(Debug, Clone)]
 pub struct Camera {
     pub position: Vec3,
-    pub look_at: Vec3,
-    pub up: Vec3,
-    pub fov: f64,
-
-    // Calculated coordinate
-    u: Vec3,
-    v: Vec3,
-    w: Vec3,
     lower_left_corner: Vec3,
     horizontal: Vec3,
     vertical: Vec3,
@@ -40,12 +32,6 @@ impl Camera {
 
         Self {
             position,
-            look_at,
-            up,
-            fov,
-            u,
-            v,
-            w,
             lower_left_corner,
             horizontal,
             vertical,

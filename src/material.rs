@@ -21,6 +21,7 @@ impl Texture {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub struct Material {
     pub texture: Texture,
@@ -33,6 +34,7 @@ pub struct Material {
     pub transparency: f64,
 }
 
+#[allow(dead_code)]
 impl Material {
     // Custom constructor
     pub fn new(
