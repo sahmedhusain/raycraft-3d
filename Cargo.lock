@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "src"
-version = "0.1.0"
+name = "raycraft-3d"
+version = "1.0.0"
