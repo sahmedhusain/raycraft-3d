@@ -31,6 +31,18 @@
 
 ---
 
+## 🖼️ Ray-Traced Showroom Renders
+
+| Scene 1: Multi-Sphere Lighting | Scene 2: Mirror Reflections |
+| :---: | :---: |
+| ![Scene 1](screenshots/scene1.png) | ![Scene 2](screenshots/scene2.png) |
+
+| Scene 3: Glass Refraction & Solids | Scene 4: Wave Fluid & Textures |
+| :---: | :---: |
+| ![Scene 3](screenshots/scene3.png) | ![Scene 4](screenshots/scene4.png) |
+
+---
+
 ## 🏗️ System Architecture
 
 ```mermaid
@@ -39,7 +51,8 @@ graph TD
     B -->|Flag --scene 1..4| C[Built-in Showroom Generator]
     B -->|Flag --file scene.rt| D[Scene Configuration Parser]
     
-    C & D --> E[Renderer Core - renderer.rs]
+    C --> E[Renderer Core - renderer.rs]
+    D --> E
     E --> F[Parallel Thread Coordinator: std::thread::scope]
     
     F --> G[Ray Trace Worker Core]
@@ -47,9 +60,11 @@ graph TD
     G --> H2[Shading Engine: Blinn-Phong & Direct Shadows]
     G --> H3[Optical Engine: Recursive Reflection & Refraction]
     
-    H1 & H2 & H3 --> I[Pixel Color Calculation & Gamma Correction]
+    H1 --> I[Pixel Color Calculation & Gamma Correction]
+    H2 --> I
+    H3 --> I
     I --> J[PPM Output Stream Writer - ppm.rs]
-```
+```,StartLine:33,TargetContent:
 
 ---
 
